@@ -13,3 +13,5 @@
 .mindmap>.mind-root{position:relative;top:auto;left:auto;transform:none;grid-column:1/-1;grid-row:2;justify-self:center;width:auto}
 .mind-lines{z-index:0}.mind-branch{position:relative;z-index:1}
 @media(max-width:760px){.mindmap{display:flex}.mind-branches{display:grid;grid-template-columns:1fr}.mind-branch:nth-child(n+4){grid-row:auto}}
+
+.offline-download{display:inline-flex;align-items:center;text-align:center;background:#e6f2ef;border:1px solid #95c5bc;border-radius:12px;padding:10px 17px;color:#17695f;font-size:18px;text-decoration:none}.offline-download:hover{border-color:#218578;background:#dceee9}@media(max-width:760px){.offline-download{font-size:15px;padding:9px 11px}}
