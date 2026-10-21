@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#218578">
+  <meta name="description" content="У врача: русско-китайская карта понятий и конструктор реплик с озвучкой.">
+  <title>У врача · Карта понятий и реплик</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/frames/frames.css?v=1">
+  <script defer src="assets/frames/data.js?v=1"></script>
+  <script defer src="assets/frames/model.js?v=1"></script>
+  <script defer src="assets/frames/app.js?v=1"></script>
+</head>
+<body>
+  <a class="skip" href="#map">К карте понятий</a>
+  <header class="site-header">
+    <a href="./" class="brand"><span>РУССКИЙ ЯЗЫК · A2</span><strong>У врача</strong></a>
+    <nav aria-label="Управление картой">
+      <a href="./">← Материалы урока</a>
+      <button id="chinese" type="button" aria-pressed="true">中文 · вкл.</button>
+      <button id="presentation" type="button" aria-pressed="false">На весь экран</button>
+    </nav>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">КАРТА ПОНЯТИЙ → РЕЧЕВАЯ МОДЕЛЬ <span lang="zh-Hans">概念图 → 表达句型</span></p>
+      <h1>Как рассказать о здоровье <span lang="zh-Hans">如何描述健康状况</span></h1>
+      <p>Выберите ветку карты. Затем раскройте части реплики, соберите свой пример и послушайте его.
+      <span class="zh" lang="zh-Hans">选择一个分支，展开句子的各部分，组合自己的表达并听录音。</span></p></div>
+      <span class="sample-tag">Пробная схема <span lang="zh-Hans">试用版</span></span>
+    </section>
+
+    <section id="map" class="concept-map" aria-label="Интеллект-карта: пациент, боль, симптомы, болезнь">
+      <svg class="map-lines" aria-hidden="true"></svg>
+      <div class="patient-root" id="patient-root"><span class="root-person" aria-hidden="true">Я</span><div><strong>Пациент</strong><span lang="zh-Hans">患者</span></div></div>
+      <div class="branches" id="branches"></div>
+      <div class="map-bridge"><span class="bridge-arrow" aria-hidden="true">↓</span><strong>Пациент описывает самочувствие → врач уточняет и называет болезнь.</strong><span class="zh" lang="zh-Hans">患者描述身体状况 → 医生进一步询问并作出诊断。</span></div>
+    </section>
+
+    <section class="workbench" aria-labelledby="builder-title">
+      <div class="workbench-heading"><div><p class="eyebrow" id="frame-eyebrow"></p><h2 id="builder-title"></h2></div><button class="question-audio" id="question-audio" type="button"></button></div>
+      <div class="levels" id="levels" aria-label="Сложность реплики"></div>
+      <div class="frame-content" id="frame-content"></div>
+      <div class="construction" id="construction" aria-label="Части конструкции"></div>
+      <div class="rule" id="rule"></div>
+      <div class="result"><div><p class="result-label">Моя реплика <span lang="zh-Hans">我的表达</span></p><p class="sentence" id="sentence" aria-live="polite"></p><p class="sentence-zh zh" lang="zh-Hans" id="sentence-zh"></p></div>
+        <div class="audio-controls"><button class="primary" id="listen" type="button"><span aria-hidden="true">▶</span> Слушать <span lang="zh-Hans">听录音</span></button><button id="slow" type="button">Медленно <span lang="zh-Hans">慢速</span></button><button id="stop" type="button" aria-label="Остановить озвучку">■</button></div>
+      </div>
+      <div class="next-step" id="next-step"></div>
+      <p id="audio-status" class="audio-status" role="status" aria-live="polite"></p>
+    </section>
+    <footer><p>Китайские пояснения — пробный перевод для проверки русистами. <span lang="zh-Hans">中文说明为试译稿，待俄语专家审校。</span></p><p>Русская озвучка — синтезированная. Оригинальные пиктограммы сохранены. <span lang="zh-Hans">俄语音频为合成语音，原有图标保持不变。</span></p><a href="frames-offline.zip" download>Скачать схему с озвучкой для работы без интернета ↓ <span lang="zh-Hans">下载离线版（含音频）</span></a></footer>
+  </main>
+  <dialog id="choices" aria-labelledby="choices-title"><div class="dialog-heading"><h2 id="choices-title"></h2><button id="close-choices" type="button" aria-label="Закрыть окно выбора">×</button></div><div id="choices-body"></div></dialog>
+  <audio id="voice" preload="none"></audio>
+  <noscript>Для работы со схемой включите JavaScript.</noscript>
+</body>
+</html>
