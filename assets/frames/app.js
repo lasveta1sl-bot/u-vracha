@@ -52,11 +52,20 @@
     }).join('');
   }
   function map(){
-    $('branches').innerHTML=D.frames.map(frame=>'<article class="branch '+(frame.id===s.frame?'active':'')+'" data-frame="'+frame.id+'"><div class="relation-label">'+esc(frame.relation)+' <span lang="zh-Hans">'+esc(frame.relationZh)+'</span></div><button type="button" class="branch-main" data-action="frame" data-value="'+frame.id+'" aria-pressed="'+(s.frame===frame.id)+'"><h2>'+esc(frame.title)+'<span lang="zh-Hans">'+esc(frame.zh)+'</span></h2><p>'+esc(frame.question)+' <span lang="zh-Hans">'+esc(frame.questionZh)+'</span></p></button><p class="branch-example">'+esc(frame.example)+zh(frame.exampleZh)+'</p><div class="branch-examples">'+frame.chips.map(w=>'<button class="concept-chip" type="button" data-concept="'+esc(w)+'" data-frame="'+frame.id+'">'+pic(w)+'<span>'+esc(w)+'<span lang="zh-Hans">'+esc(wordZh(w))+'</span></span></button>').join('')+'<span class="chip-more">'+(frame.id==='pain'?'+ 11 форм':frame.id==='symptoms'?'+ 2 понятия':'+ 1 болезнь')+'</span></div></article>').join('');
+    $('patient-root').querySelectorAll('[data-action="role"]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.value===s.role)));
+    const doctorRelations={pain:['уточняет','询问'],symptoms:['оценивает','评估'],disease:['называет диагноз','作出诊断']};
+    const mapFrames=D.frames.map(frame=>{
+      const [relation,relationZh]=s.role==='doctor'?doctorRelations[frame.id]:[frame.relation,frame.relationZh];
+      return {...frame,relation,relationZh,example:frame.example.replace(/^У меня /,'У '+M.owner(s)+' '),exampleZh:s.role==='doctor'?frame.exampleZh.replace(/^我/,'您'):frame.exampleZh};
+    });
+    $('branches').innerHTML=mapFrames.map(frame=>'<article class="branch '+(frame.id===s.frame?'active':'')+'" data-frame="'+frame.id+'"><div class="relation-label">'+esc(frame.relation)+' <span lang="zh-Hans">'+esc(frame.relationZh)+'</span></div><button type="button" class="branch-main" data-action="frame" data-value="'+frame.id+'" aria-pressed="'+(s.frame===frame.id)+'"><h2>'+esc(frame.title)+'<span lang="zh-Hans">'+esc(frame.zh)+'</span></h2><p>'+esc(frame.question)+' <span lang="zh-Hans">'+esc(frame.questionZh)+'</span></p></button><p class="branch-example">'+esc(frame.example)+zh(frame.exampleZh)+'</p><div class="branch-examples">'+frame.chips.map(w=>'<button class="concept-chip" type="button" data-concept="'+esc(w)+'" data-frame="'+frame.id+'">'+pic(w)+'<span>'+esc(w)+'<span lang="zh-Hans">'+esc(wordZh(w))+'</span></span></button>').join('')+'<span class="chip-more">'+(frame.id==='pain'?'+ 11 форм':frame.id==='symptoms'?'+ 2 понятия':'+ 1 болезнь')+'</span></div></article>').join('');
     requestAnimationFrame(drawMap);
   }
   function slot(label,chinese,value,key,kind,picture=''){
     return '<div class="slot" data-kind="'+kind+'"><span class="slot-label">'+esc(label)+'<span lang="zh-Hans">'+esc(chinese)+'</span></span><button type="button" data-open="'+key+'" aria-haspopup="dialog" aria-controls="choices"><span class="slot-word">'+pic(picture)+(value?esc(value):'<span class="plus">+ уточнение</span>')+'</span><span class="chevron" aria-hidden="true">⌄</span></button></div>';
+  }
+  function fixedOwner(value){
+    return '<div class="slot fixed" data-kind="owner"><div class="fixed-token">'+esc(value)+'</div></div>';
   }
   function render(){
     s=M.normalise(s);map();
@@ -65,29 +74,30 @@
     $('frame-eyebrow').innerHTML='ВЕТКА '+(D.frames.indexOf(frame)+1)+' · '+esc(frame.title.toUpperCase())+' <span lang="zh-Hans">'+esc(frame.zh)+'</span>';
     $('builder-title').innerHTML='Собираем реплику <span lang="zh-Hans">组合表达</span>';
     $('question-audio').innerHTML='▶ '+esc(frame.question)+zh(frame.questionZh);
-    const labels=s.frame==='pain'?[['Коротко','简短表达'],['У кого болит','谁哪里疼'],['Уточняем и связываем','补充并连接']]:s.frame==='symptoms'?[['Называем симптом','说出症状'],['Добавляем признак','补充特征'],['Соединяем симптомы','连接症状']]:[['Называем болезнь','说出疾病'],['Пациент ↔ врач','患者 ↔ 医生'],['Болею чем?','患什么病？']];
+    const labels=s.frame==='pain'?[['Коротко','简短表达'],['Полная реплика','完整表达'],['Уточняем и связываем','补充并连接']]:s.frame==='symptoms'?[['Называем симптом','说出症状'],['Добавляем признак','补充特征'],['Соединяем симптомы','连接症状']]:[['Называем болезнь','说出疾病'],['Полная реплика','完整表达'],['Болею чем?','患什么病？']];
     $('levels').innerHTML=labels.map(([ru,cn],i)=>'<button type="button" data-action="level" data-value="'+(i+1)+'" aria-pressed="'+(s.level===i+1)+'"><b class="level-number">'+(i+1)+'</b><span>'+ru+'<span lang="zh-Hans">'+cn+'</span></span></button>').join('');
-    $('frame-content').innerHTML='<span>Кто говорит? <span lang="zh-Hans">谁在说？</span></span>'+[['patient','Пациент · у меня','患者 · 我'],['doctor','Врач · у вас','医生 · 您']].map(([key,ru,cn])=>'<button type="button" data-action="role" data-value="'+key+'" aria-pressed="'+(s.role===key)+'">'+ru+' <span lang="zh-Hans">'+cn+'</span></button>').join('')+(s.frame==='symptoms'&&s.symptom!=='пульс'?'<button type="button" data-open="presence" aria-haspopup="dialog" aria-controls="choices">'+(s.absence?'Нет симптома':'Есть симптом')+' <span lang="zh-Hans">'+(s.absence?'没有症状':'有症状')+'</span> ⌄</button>':'');
+    $('frame-content').innerHTML=s.frame==='symptoms'&&s.symptom!=='пульс'?'<button type="button" data-open="presence" aria-haspopup="dialog" aria-controls="choices">'+(s.absence?'Нет симптома':'Есть симптом')+' <span lang="zh-Hans">'+(s.absence?'没有症状':'有症状')+'</span> ⌄</button>':'';
+    $('frame-content').hidden=!$('frame-content').innerHTML;
     let slots='',rule='',ruleZh='';
     if(s.frame==='pain'){
-      if(s.level>=2)slots+=slot('У кого?','谁？','У '+M.owner(s),'owner','owner');
+      if(s.level>=2)slots+=fixedOwner('У '+M.owner(s));
       if(s.level===3)slots+=slot('Как сильно?','疼痛程度',s.intensity,'intensity','intensity');
       slots+=slot('Что происходит?','怎么了？',M.body(s).number===1?'болит':'болят','number','verb');
       slots+=slot('Что болит?','哪里疼？',s.body,'body','body',s.body);
       rule='<b>'+esc(s.body)+'</b> → '+(M.body(s).number===1?'единственное число → <b>болит</b>':'множественное число → <b>болят</b>')+'.';
       ruleZh=(M.body(s).number===1?'名词为单数 → 用 болит。':'名词为复数 → 用 болят。')+'例如：болит ухо ↔ болят уши。';
     }else if(s.frame==='symptoms'){
-      const d=D.symptoms[s.symptom];slots+=slot('У кого?','谁？','У '+M.owner(s),'owner','owner');
+      const d=D.symptoms[s.symptom];slots+=fixedOwner('У '+M.owner(s));
       if(s.absence)slots+=slot('Есть или нет?','有还是没有？','нет','presence','verb');
       else if(s.level>=2||s.symptom==='пульс')slots+=slot(d.question.replace(/\?$/,''),'特征',s.quality,'quality','intensity');
       slots+=slot(d.kind==='measure'?'Показатель':'Симптом',d.kind==='measure'?'指标':'症状',s.absence?d.gen:s.symptom,'symptom','body',s.symptom);
       if(s.level===3&&!s.absence&&s.symptom!=='пульс')slots+=slot('Что ещё?','还有什么？',s.second?'и '+s.second:'','second','body',s.second);
-      rule=s.absence?'<b>нет</b> → чего? → <b>'+d.gen+'</b> ('+s.symptom+' → '+d.gen+').':s.quality&&(s.level>=2||s.symptom==='пульс')?'<b>'+s.quality+' '+s.symptom+'</b> — признак подходит к названию.':'<b>У меня + '+s.symptom+'</b> — называем симптом или показатель.';
+      rule=s.absence?'<b>нет</b> → чего? → <b>'+d.gen+'</b> ('+s.symptom+' → '+d.gen+').':s.quality&&(s.level>=2||s.symptom==='пульс')?'<b>'+s.quality+' '+s.symptom+'</b> — признак подходит к названию.':'<b>У '+M.owner(s)+' + '+s.symptom+'</b> — называем симптом или показатель.';
       ruleZh=s.absence?'нет 后面的名词用第二格。«Нет температуры» 在此表示«没有发烧»。':s.symptom==='пульс'?'пульс 是指标，需要说明：частый（快）、редкий（慢）、нормальный（正常）。':'形容词随名词变化：сильный кашель，высокая температура。';
     }else{
       const d=D.diseases.find(d=>d.ru===s.disease),verb=s.level===3&&s.mode==='verb';
-      slots+=slot(verb?'Кто?':'У кого?','谁？',verb?(s.role==='doctor'?'Вы':'Я'):'У '+M.owner(s),'owner','owner');
-      if(s.level===3)slots+=slot('Модель','句型',verb?(s.role==='doctor'?'болеете':'болею'):'У кого + болезнь','mode','verb');
+      slots+=fixedOwner(verb?(s.role==='doctor'?'Вы':'Я'):'У '+M.owner(s));
+      if(s.level===3)slots+=slot('Модель','句型',verb?(s.role==='doctor'?'болеете':'болею'):'У '+M.owner(s)+' + болезнь','mode','verb');
       slots+=slot(verb?'Болею чем?':'Какая болезнь?','什么病？',verb?d.instrumental:d.ru,'disease','body',d.ru);
       rule=verb?'<b>'+(s.role==='doctor'?'Вы болеете':'Я болею')+'</b> → чем? → <b>'+d.instrumental+'</b>.':(s.role==='doctor'?'<b>Врач → у вас</b>: У вас '+d.ru+'.':'<b>Пациент → у меня</b>: У меня '+d.ru+'.');
       ruleZh=verb?'болеть（患病）后接第五格：ангина → ангиной，грипп → гриппом。':'患者说 «У меня…»；医生对患者说 «У вас…»。';
