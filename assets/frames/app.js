@@ -12,7 +12,8 @@
   const question=()=>s.frame==='care'&&s.level===1?{question:'Чем вы болеете?',questionZh:'您患了什么病？'}:s.frame==='care'&&s.level===2?{question:'Как вы лечитесь?',questionZh:'您怎么治疗？'}:f();
   const wordZh=w=>D.bodies.find(b=>b.ru===w)?.zh||D.symptoms[w]?.zh||D.diseases.find(d=>d.ru===w)?.zh||Object.values(D.care).flat().find(t=>t.ru===w)?.zh||'';
   function save(){try{localStorage.setItem('uv-concept-map-v1',JSON.stringify({state:s,chinese:!document.body.classList.contains('hide-zh')}));}catch{}}
-  function stop(){voiceToken++;audio.pause();audio.removeAttribute('src');audio.load();$('audio-status').textContent='';}
+  function stop(){window.UV_VOICE?.stop();voiceToken++;audio.pause();audio.removeAttribute('src');audio.load();$('audio-status').textContent='';}
+  document.addEventListener('uv-voice-start',stop);
   function loadPack(name){
     if(window.UV_FRAME_AUDIO?.[name])return Promise.resolve();
     if(loading.has(name))return loading.get(name);
