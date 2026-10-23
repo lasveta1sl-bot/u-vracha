@@ -1,7 +1,7 @@
 /* Pure language model: the UI and audio inventory use the same permitted forms. */
 window.UV_FRAMES_MODEL = (() => {
   const D=window.UV_FRAMES_DATA;
-  const defaults={frame:'pain',level:2,role:'patient',body:'голова',intensity:'',symptom:'кашель',quality:'',second:'',absence:false,disease:'ангина',mode:'have',linked:false,careKind:'medicine',medicine:'лекарство',place:'больница',careDoctor:'врач'};
+  const defaults={frame:'pain',level:2,role:'patient',body:'голова',intensity:'',symptom:'кашель',quality:'',second:'',absence:false,disease:'ангина',mode:'have',linked:false,careKind:'medicine',medicine:'лекарство',place:'больница',careDoctor:'врач',medicinePurposeEnabled:true,medicineFor:'disease'};
   const owner=s=>s.role==='doctor'?'вас':'меня';
   const whoZh=s=>s.role==='doctor'?'您':'我';
   const body=s=>D.bodies.find(b=>b.ru===s.body)||D.bodies[0];
@@ -23,6 +23,9 @@ window.UV_FRAMES_MODEL = (() => {
     if(s.frame==='disease'){s.mode='have';s.level=2;}
     if(!['medicine','place','careDoctor'].includes(s.careKind))s.careKind='medicine';
     for(const key of ['medicine','place','careDoctor'])if(!D.care[key].some(x=>x.ru===s[key]))s[key]=defaults[key];
+    s.medicinePurposeEnabled=s.medicinePurposeEnabled!==false;
+    const medicine=D.care.medicine.find(t=>t.ru===s.medicine),purpose=s.medicineFor==='disease'?s.disease:s.medicineFor;
+    if(!medicine.purposes.includes(purpose))s.medicineFor=medicine.defaultPurpose;
     return s;
   }
   const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
@@ -31,8 +34,10 @@ window.UV_FRAMES_MODEL = (() => {
   function disease(s){return 'У '+owner(s)+' '+s.disease+'.';}
   const subject=s=>s.role==='doctor'?'Вы':'Я';
   function illness(s){return subject(s)+(s.role==='doctor'?' болеете ':' болею ')+D.diseases.find(d=>d.ru===s.disease).instrumental+'.';}
-  function treatment(s){const t=D.care[s.careKind].find(t=>t.ru===s[s.careKind]);return subject(s)+(s.careKind==='medicine'?(s.role==='doctor'?' принимаете ':' принимаю '):(s.role==='doctor'?' лечитесь ':' лечусь '))+t.form+'.';}
-  function careZh(s){const t=D.care[s.careKind].find(t=>t.ru===s[s.careKind]);return whoZh(s)+t.phraseZh+'。';}
+  function medicinePurpose(s){return D.medicinePurposes.find(t=>t.ru===(s.medicineFor==='disease'?s.disease:s.medicineFor));}
+  function medicineVerb(s){const t=D.care.medicine.find(t=>t.ru===s.medicine);return t.verbs?.[s.role]||(s.role==='doctor'?'принимаете':'принимаю');}
+  function treatment(s){const t=D.care[s.careKind].find(t=>t.ru===s[s.careKind]);const purpose=s.careKind==='medicine'&&s.medicinePurposeEnabled?' от '+medicinePurpose(s).genitive:'';return subject(s)+' '+(s.careKind==='medicine'?medicineVerb(s):(s.role==='doctor'?'лечитесь':'лечусь'))+' '+t.form+purpose+'.';}
+  function careZh(s){const t=D.care[s.careKind].find(t=>t.ru===s[s.careKind]);if(s.careKind==='medicine'&&s.medicinePurposeEnabled){const p=medicinePurpose(s);return whoZh(s)+(t.verbZh||'服用')+p.actionZh+(p.ru==='температура'?'':'的')+t.zh+'。';}return whoZh(s)+t.phraseZh+'。';}
   function painZh(s){const i=s.level===3?D.intensities.find(i=>i.ru===s.intensity):null;return(s.level>=2?whoZh(s):'')+body(s).zh+(i?.zh||'')+'疼。';}
   function symptomZh(s){
     const d=D.symptoms[s.symptom],q=(s.level>=2||s.symptom==='пульс')?d.qualities.find(q=>q.ru===s.quality):null;
@@ -52,6 +57,11 @@ window.UV_FRAMES_MODEL = (() => {
     return sentences(s).map((text,i)=>{
       if(s.frame==='care'){
         if(s.level===1||(s.level===3&&i===0))return text.replace(subject(s),subject(s)+' (П1)').replace(/\.$/,' (П5).');
+        if(s.careKind==='medicine'){
+          const medicine=D.care.medicine.find(t=>t.ru===s.medicine),d=medicinePurpose(s);
+          text=text.replace(subject(s),subject(s)+' (П1)').replace(medicine.form,medicine.form+' (П4)');
+          return s.medicinePurposeEnabled?text.replace('от '+d.genitive,'от '+d.genitive+' (П2)'):text;
+        }
         return text.replace(subject(s),subject(s)+' (П1)').replace(/\.$/,' (П'+(s.careKind==='medicine'?4:s.careKind==='place'?6:2)+').');
       }
       text=text.replace('У '+owner(s),'У '+owner(s)+' (П2)');
@@ -67,6 +77,7 @@ window.UV_FRAMES_MODEL = (() => {
     D.bodies.forEach(b=>add(b.ru,'words'));
     Object.keys(D.symptoms).forEach(w=>add(w,'words'));
     D.diseases.forEach(d=>{add(d.ru,'words');add(d.instrumental,'words');});
+    D.medicinePurposes.forEach(t=>add('от '+t.genitive,'words'));
     D.intensities.filter(i=>i.ru).forEach(i=>add(i.ru,'words'));
     D.frames.forEach(f=>add(f.question,'questions'));
     ['Чем вы болеете?','Как вы лечитесь?'].forEach(q=>add(q,'questions'));
@@ -81,10 +92,10 @@ window.UV_FRAMES_MODEL = (() => {
         });
         D.diseases.forEach(d=>['have','verb'].forEach(mode=>add(disease(normalise({frame:'disease',role,level,disease:d.ru,mode})),'disease')));
         D.diseases.forEach(d=>add(illness(normalise({frame:'care',role,level,disease:d.ru})),'care'));
-        for(const kind of ['medicine','place','careDoctor'])for(const t of D.care[kind])add(treatment(normalise({frame:'care',role,careKind:kind,[kind]:t.ru})),'care');
+        for(const kind of ['medicine','place','careDoctor'])for(const t of D.care[kind])for(const purpose of kind==='medicine'?t.purposes:['ангина'])for(const medicinePurposeEnabled of [false,true])add(treatment(normalise({frame:'care',role,careKind:kind,[kind]:t.ru,medicineFor:D.diseases.some(d=>d.ru===purpose)?'disease':purpose,disease:D.diseases.some(d=>d.ru===purpose)?purpose:'ангина',medicinePurposeEnabled})),'care');
       }
     });
     return Array.from(phrases,([text,group])=>({text,group}));
   }
-  return{defaults,normalise,owner,subject,body,pain,symptom,disease,illness,treatment,sentences,translation,annotatedSentences,inventory};
+  return{defaults,normalise,owner,subject,body,pain,symptom,disease,illness,treatment,medicinePurpose,medicineVerb,sentences,translation,annotatedSentences,inventory};
 })();

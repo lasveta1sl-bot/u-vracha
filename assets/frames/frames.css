@@ -17,3 +17,4 @@
 .case-tag[data-case="1"]{color:#197f73}.case-tag[data-case="4"]{color:#a25227}.case-tag[data-case="5"]{color:#7650aa}.case-tag[data-case="6"]{color:#57743a}
 
 @media(max-width:680px){.construction>.care-part{grid-column:1/-1}}
+@media(max-width:680px){.care-slots .slot:nth-child(n+3){grid-column:1/-1}}

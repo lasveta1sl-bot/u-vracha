@@ -64,7 +64,7 @@
   }
   const caseTag=n=>n?'<span class="case-tag" data-case="'+n+'"> (П'+n+')</span>':'';
   function slot(label,chinese,value,key,kind,picture=''){
-    const number=key==='body'||key==='second'&&s.second?1:key==='symptom'?(s.absence?2:1):key==='disease'?(s.frame==='care'?5:1):key==='medicine'?4:key==='place'?6:key==='careDoctor'?2:0;
+    const number=key==='body'||key==='second'&&s.second?1:key==='symptom'?(s.absence?2:1):key==='disease'?(s.frame==='care'?5:1):key==='medicine'?4:key==='medicineFor'?2:key==='place'?6:key==='careDoctor'?2:0;
     return '<div class="slot" data-kind="'+kind+'"><span class="slot-label">'+esc(label)+'<span lang="zh-Hans">'+esc(chinese)+'</span></span><button type="button" data-open="'+key+'" aria-haspopup="dialog" aria-controls="choices"><span class="slot-word">'+pic(picture)+(value?esc(value)+caseTag(number):'<span class="plus">+ уточнение</span>')+'</span><span class="chevron" aria-hidden="true">⌄</span></button></div>';
   }
   function fixedOwner(value,number=2,kind='owner'){
@@ -78,9 +78,11 @@
     }
     if(s.level>=2){
       const t=D.care[s.careKind].find(t=>t.ru===s[s.careKind]);
-      const verb=s.careKind==='medicine'?(s.role==='doctor'?'принимаете':'принимаю'):(s.role==='doctor'?'лечитесь':'лечусь');
+      const verb=s.careKind==='medicine'?M.medicineVerb(s):(s.role==='doctor'?'лечитесь':'лечусь');
       const label=s.careKind==='medicine'?'Что?':s.careKind==='place'?'Где?':'У кого?';
-      result+='<section class="care-part"><p>Лечение <span lang="zh-Hans">治疗</span></p><div class="care-slots">'+fixedOwner(M.subject(s),1)+fixedOwner(verb,0,'verb')+slot(label,'选择',t.form,s.careKind,'body',t.ru)+'</div></section>';
+      const d=M.medicinePurpose(s);
+      const purpose=s.careKind==='medicine'?slot('От чего?','用于什么？',s.medicinePurposeEnabled?'от '+d.genitive:'','medicineFor','body',s.medicinePurposeEnabled?(d.icon||d.ru):''):'';
+      result+='<section class="care-part"><p>Лечение <span lang="zh-Hans">治疗</span></p><div class="care-slots">'+fixedOwner(M.subject(s),1)+fixedOwner(verb,0,'verb')+slot(label,'选择',t.form,s.careKind,'body',t.ru)+purpose+'</div></section>';
     }
     return result;
   }
@@ -95,7 +97,7 @@
     $('levels').hidden=s.frame==='disease';
     $('levels').innerHTML=labels.map(([ru,cn],i)=>'<button type="button" data-action="level" data-value="'+(i+1)+'" aria-pressed="'+(s.level===i+1)+'"><b class="level-number">'+(i+1)+'</b><span>'+ru+'<span lang="zh-Hans">'+cn+'</span></span></button>').join('');
     $('frame-content').innerHTML=s.frame==='symptoms'&&s.symptom!=='пульс'?'<button type="button" data-open="presence" aria-haspopup="dialog" aria-controls="choices">'+(s.absence?'Нет симптома':'Есть симптом')+' <span lang="zh-Hans">'+(s.absence?'没有症状':'有症状')+'</span> ⌄</button>':'';
-    if(s.frame==='care'&&s.level>=2)$('frame-content').innerHTML=[['medicine','Принимаю что?','服用什么'],['place','Лечусь где?','在哪里治疗'],['careDoctor','Лечусь у кого?','在谁处治疗']].map(([key,ru,cn])=>'<button type="button" data-action="careKind" data-value="'+key+'" aria-pressed="'+(s.careKind===key)+'">'+ru+' <span lang="zh-Hans">'+cn+'</span></button>').join('');
+    if(s.frame==='care'&&s.level>=2)$('frame-content').innerHTML=[['medicine',s.medicine==='капли'?'Использую что?':'Принимаю что?',s.medicine==='капли'?'使用什么':'服用什么'],['place','Лечусь где?','在哪里治疗'],['careDoctor','Лечусь у кого?','在谁处治疗']].map(([key,ru,cn])=>'<button type="button" data-action="careKind" data-value="'+key+'" aria-pressed="'+(s.careKind===key)+'">'+ru+' <span lang="zh-Hans">'+cn+'</span></button>').join('');
     $('frame-content').hidden=!$('frame-content').innerHTML;
     let slots='',rule='',ruleZh='';
     if(s.frame==='pain'){
@@ -117,6 +119,10 @@
       slots=careSlots();
       rule=s.level===1?'болеть → чем? → <b>П5</b>':s.careKind==='medicine'?'принимать → что? → <b>П4</b>':s.careKind==='place'?'лечиться → где? → в + <b>П6</b>':'лечиться → у кого? → у + <b>П2</b>';
       ruleZh=s.level===1?'болеть（患病）后接第五格。':'按句型选形式：принимать + 第四格；в + 第六格；у + 第二格。';
+      if(s.level>=2&&s.careKind==='medicine'){
+        rule=(s.medicine==='капли'?'использовать':'принимать')+' → что? → <b>П4</b>; '+s.medicine+' → от чего? → <b>от + П2</b>.<br>ангина → от ангины; кашель → от кашля; насморк → от насморка; температура → от температуры.';
+        ruleZh='принимать / использовать 后接第四格；说明药物的用途时，用 от + 第二格。例如：сироп от кашля（止咳糖浆），капли от насморка（缓解流鼻涕的滴鼻液）。';
+      }
     }else{
       slots=fixedOwner('У '+M.owner(s))+slot('Какая болезнь?','什么病？',s.disease,'disease','body',s.disease);
       rule='<b>У '+M.owner(s)+' (П2)</b> + название болезни <b>(П1)</b>.';
@@ -131,7 +137,7 @@
     $('chinese').textContent=document.body.classList.contains('hide-zh')?'中文 · выкл.':'中文 · вкл.';$('chinese').setAttribute('aria-pressed',String(!document.body.classList.contains('hide-zh')));save();
   }
   function option(ru,cn,key,value,selected=false,icon=''){
-    const text=D.audio[value]?value:D.audio[ru]?ru:'';
+    const text=key==='medicinePurpose'&&D.audio[ru]?ru:D.audio[value]?value:D.audio[ru]?ru:'';
     return '<div class="choice-item"><button class="choice" type="button" data-action="'+key+'" data-value="'+esc(value)+'" aria-pressed="'+selected+'">'+pic(icon)+'<span><strong>'+esc(ru)+'</strong>'+zh(cn)+'</span></button>'+(text?'<button class="word-audio" type="button" data-speak="'+esc(text)+'" aria-label="Слушать слово: '+esc(text)+'">▶</button>':'')+'</div>';
   }
   function openChoices(key,trigger){
@@ -153,8 +159,10 @@
       title='Добавляем ещё один симптом';cn='再补充一个症状';html='<div class="options">'+Object.entries(D.symptoms).filter(([w])=>w!==s.symptom&&w!=='пульс').map(([w,d])=>option('и '+w,d.zh,'second',w,s.second===w,w)).join('')+option('Один симптом','只说一个症状','second','',!s.second)+'</div>';
     }else if(key==='disease'){
       title=s.frame==='care'?'Болею чем?':'Какая болезнь?';cn='患什么病？';html='<div class="options">'+D.diseases.map(d=>option(s.frame==='care'?d.ru+' → '+d.instrumental:d.ru,d.zh,'disease',d.ru,s.disease===d.ru,d.ru)).join('')+'</div>';
+    }else if(key==='medicineFor'){
+      title='Лекарство от чего?';cn='药物用于什么？';const medicine=D.care.medicine.find(m=>m.ru===s.medicine),selected=M.medicinePurpose(s);html='<div class="options">'+D.medicinePurposes.filter(t=>medicine.purposes.includes(t.ru)).map(t=>option('от '+t.genitive,t.zh+' · от + П2','medicinePurpose',t.ru,s.medicinePurposeEnabled&&selected.ru===t.ru,t.icon||t.ru)).join('')+option('Без уточнения','不说明用途','medicinePurpose','none',!s.medicinePurposeEnabled)+'</div><p class="dialog-note">После «от» — П2: от ангины, от кашля, от насморка, от температуры.'+zh('от 后接第二格；这里可以说明疾病，也可以说明症状。')+'</p>';
     }else if(['medicine','place','careDoctor'].includes(key)){
-      title=key==='medicine'?'Принимаю что?':key==='place'?'Лечусь где?':'Лечусь у кого?';cn=key==='medicine'?'服用什么？':key==='place'?'在哪里治疗？':'在谁处治疗？';html='<div class="options">'+D.care[key].map(t=>option(t.ru+' → '+t.form,t.zh,key,t.ru,s[key]===t.ru,t.ru)).join('')+'</div>';
+      title=key==='medicine'?'Лекарства: что принимаю / использую?':key==='place'?'Лечусь где?':'Лечусь у кого?';cn=key==='medicine'?'服用或使用什么药物？':key==='place'?'在哪里治疗？':'在谁处治疗？';html='<div class="options">'+D.care[key].map(t=>option(t.ru+' → '+t.form,t.zh,key,t.ru,s[key]===t.ru,t.ru)).join('')+'</div>';
     }else if(key==='mode'){
       title='Две модели — одно содержание';cn='两种句型表达相同的内容';const who=s.role==='doctor'?'您':'我';html='<div class="options">'+option('У '+M.owner(s)+' ангина',who+'患有扁桃体炎','mode','have',s.mode==='have')+option((s.role==='doctor'?'Вы болеете':'Я болею')+' ангиной',who+'患有扁桃体炎','mode','verb',s.mode==='verb')+'</div>';
     }
@@ -165,6 +173,8 @@
     if(['frame','body','intensity','symptom','quality','second','disease','mode','role','careKind','medicine','place','careDoctor'].includes(key))s[key]=value;
     if(key==='frame'){if(value==='care')s.level=1;history.replaceState(null,'','#'+value);}
     if(key==='level')s.level=Number(value);
+    if(key==='medicinePurpose'){s.medicinePurposeEnabled=value!=='none';if(value!=='none'){const disease=D.diseases.some(d=>d.ru===value);s.medicineFor=disease?'disease':value;if(disease)s.disease=value;}}
+    if(key==='medicine'){s.medicineFor=D.care.medicine.find(t=>t.ru===value).defaultPurpose;s.medicinePurposeEnabled=true;}
     if(key==='absence'||key==='linked')s[key]=value==='true';
     if(key==='body'&&s.level<1)s.level=1;
     if(key==='symptom'){s.quality='';s.absence=false;s.second='';}
