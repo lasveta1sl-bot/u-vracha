@@ -17,13 +17,9 @@
   function loadPack(name){
     if(window.UV_FRAME_AUDIO?.[name])return Promise.resolve();
     if(loading.has(name))return loading.get(name);
-    const p=new Promise((resolve,reject)=>{
-      const script=document.createElement('script');script.src=D.audioPacks[name];
-      script.onload=()=>{script.remove();if(window.UV_FRAME_AUDIO?.[name])resolve();else{loading.delete(name);reject(new Error('empty'));}};
-      script.onerror=()=>{script.remove();loading.delete(name);reject(new Error('network'));};
-      document.head.append(script);
-    });loading.set(name,p);return p;
+    const promise=new Promise((resolve,reject)=>{const script=document.createElement('script');let done=false;const finish=error=>{if(done)return;done=true;clearTimeout(timer);script.remove();if(error){loading.delete(name);reject(error);}else resolve();};const timer=setTimeout(()=>finish(Error('recording load timeout')),15000);script.src=D.audioPacks[name];script.onload=()=>finish(window.UV_FRAME_AUDIO?.[name]?null:Error('empty recording'));script.onerror=()=>finish(Error('recording unavailable'));document.head.append(script);});loading.set(name,promise);return promise;
   }
+  function startAudio(a){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{a.pause();a.removeAttribute('src');a.load();reject(Error('audio start timeout'));},8000);a.play().then(()=>{clearTimeout(timer);resolve();},error=>{clearTimeout(timer);reject(error);});});}
   async function listen(texts,slow=false){
     stop();const token=voiceToken;
     $('audio-status').textContent='Подготовка озвучки…';
@@ -36,7 +32,7 @@
         if(token!==voiceToken)return;
         const entry=entries[index];audio.src=window.UV_FRAME_AUDIO[entry.pack][entry.id];audio.playbackRate=slow?.8:1;audio.preservesPitch=true;
         audio.onended=()=>{if(token!==voiceToken)return;if(++index<entries.length)play();else $('audio-status').textContent=document.body.classList.contains('hide-zh')?'Запись закончилась.':'Запись закончилась. 录音结束。';};
-        await audio.play();if(token===voiceToken)$('audio-status').textContent=(slow?'Медленно: ':'Слушаем: ')+texts[index];
+        await startAudio(audio);if(token===voiceToken)$('audio-status').textContent=(slow?'Медленно: ':'Слушаем: ')+texts[index];
       };
       await play();
     }catch(e){if(token!==voiceToken)return;$('audio-status').textContent=e.name==='NotAllowedError'?'Запись готова. Нажмите «Слушать» ещё раз.':'Не удалось открыть запись. Нажмите «Слушать» ещё раз или используйте скачанную офлайн-версию.';}
