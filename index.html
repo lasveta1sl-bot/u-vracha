@@ -26,7 +26,8 @@
       let zh=dictionary[ru];
       if(!zh)continue;
       const next=node.nextSibling;
-      if(next?.nodeType===1&&(next.matches('.zh,[data-manual-zh]'))){
+      if(next?.nodeType===1&&(next.matches('.zh,[data-manual-zh]')||
+          (chinese.test(next.textContent)&&!/[А-Яа-яЁё]/u.test(next.textContent)))){
         if(next.textContent!==zh)next.textContent=zh;
         next.dataset.manualZh='1';
       }else{
